@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Head from 'next/head';
 
 const questions = [
@@ -12,11 +12,19 @@ const questions = [
   },
   {
     id: 2,
-    question: 'What is 2 + 2?',
-    options: ['3', '4', '5', '6'],
-    correctAnswer: '4',
-    explanation: '2 + 2 equals 4.',
-    imageUrl: '/math.jpg' // Example image URL for the second question
+    question: 'Who invented gravity?',
+    options: ['Isaac Newton', 'Benjamin Franklin', 'Axwell Gravity', 'none of the above'],
+    correctAnswer: 'none of the above',
+    explanation: 'No one discovered gravity as it has always existed',
+    imageUrl: '/random/gravity.jpg' // Example image URL for the second question
+  },
+  {
+    id: 3,
+    question: 'Who founded apple',
+    options: ['Steve Jobs & Wozniak', 'Steve jobs & Tim Cook', 'Bill Gates', 'none of the above'],
+    correctAnswer: 'Steve Jobs & Wozniak',
+    explanation: 'Apple was founded on April 1, 1976, by Steve Jobs and Steve Wozniak',
+    imageUrl: '/random/apple.png' // Example image URL for the second question
   },
   // Add more questions here
 ];
@@ -25,9 +33,36 @@ export default function Home() {
   const [selectedOption, setSelectedOption] = useState(null);
   const [isCorrect, setIsCorrect] = useState(null);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [timeLeft, setTimeLeft] = useState(15); // Initial time left for each question
+  let timer; // Declare timer variable outside of useEffect
+
+  useEffect(() => {
+    // Reset timer and selected option when moving to the next question
+    setTimeLeft(15);
+    setSelectedOption(null);
+    setIsCorrect(null);
+
+    // Start the countdown timer
+    timer = setInterval(() => {
+      setTimeLeft((prevTime) => {
+        if (prevTime === 0) {
+          clearInterval(timer); // Clear interval when time reaches 0
+          setIsCorrect(false); // Trigger wrong answer behavior
+          new Audio('/wrong.mp3').play();
+          return 0;
+        }
+        return prevTime - 1;
+      });
+    }, 1000);
+
+    // Cleanup the interval on component unmount or when moving to the next question
+    return () => clearInterval(timer);
+  }, [currentQuestionIndex]); // Re-run effect when moving to the next question
 
   const handleAnswer = (correctAnswer, explanation) => (selectedOption) => {
     setSelectedOption(selectedOption);
+    clearInterval(timer); // Clear the interval when an answer is selected
+
     if (correctAnswer === selectedOption) {
       setIsCorrect(true);
       new Audio('/correct.mp3').play();
@@ -38,8 +73,6 @@ export default function Home() {
   };
 
   const handleNext = () => {
-    setSelectedOption(null);
-    setIsCorrect(null);
     setCurrentQuestionIndex((prevIndex) => prevIndex + 1);
   };
 
@@ -53,7 +86,7 @@ export default function Home() {
       <main className="p-4 relative">
         {isCorrect === null && currentQuestionIndex < questions.length && (
           <div className="mb-6">
-            {questions[currentQuestionIndex].imageUrl && ( // Conditionally render image if imageUrl is provided
+            {questions[currentQuestionIndex].imageUrl && (
               <img src={questions[currentQuestionIndex].imageUrl} alt="Question" className="mb-2 rounded-lg" />
             )}
             <p className="text-lg font-semibold mb-2">
@@ -86,13 +119,13 @@ export default function Home() {
         )}
 
         {isCorrect !== null && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center ">
-            <p className="text-3xl font-bold">
+          <div className=" inset-0 flex flex-col items-center justify-center ">
+            <p className="text-3xl font-bold animate-bounce">
               {isCorrect ? 'Correct' : 'Wrong'}
             </p>
-            <div className="mx-14 px-10 whitespace-nowrap">
+            <div className=" ">
               {!isCorrect && (
-                <p className="text-lg mt-4 text-center ">
+                <p className="flex text-lg mt-4 text-center text-pretty break-normal ">
                   {questions[currentQuestionIndex].explanation}
                 </p>
               )}
@@ -103,6 +136,15 @@ export default function Home() {
             >
               Next
             </button>
+          </div>
+        )}
+
+        {/* Countdown Timer */}
+        {selectedOption === null && (
+          <div className="absolute top-4 right-4 text-2xl font-bold">
+            <span className={timeLeft <= 10 ? (timeLeft <= 5 ? 'text-red-500' : 'text-orange-500') : 'text-green-500'}>
+              {timeLeft}
+            </span>
           </div>
         )}
       </main>
